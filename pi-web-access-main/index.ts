@@ -152,6 +152,10 @@ interface WebSearchConfig {
 	summaryModel?: string;
 	summaryGenerationDeadlineMs?: unknown;
 	maxInlineContentChars?: unknown;
+	/** Controls how much tool-schema text is exposed to the LLM. Default: "full". */
+	toolSchemaMode?: unknown;
+	/** Optional global proxy; already supported by utils.ts, declared here for schema locking. */
+	proxy?: unknown;
 	webSearch?: {
 		enabled?: boolean;
 	};
@@ -171,6 +175,7 @@ interface WebSearchConfig {
 }
 
 type WebSearchWorkflow = "none" | "summary-review" | "auto-summary";
+type ToolSchemaMode = "full" | "compact" | "minimal";
 type CuratorWorkflow = "summary-review";
 export type CuratorProvider = Exclude<SearchProvider, "auto">;
 type SummaryWorkflow = "summary-review" | "auto-summary";
@@ -254,6 +259,34 @@ function searchProviderSchema(description: string) {
 		StringEnum([...SEARCH_PROVIDERS]),
 		Type.Array(StringEnum([...RESOLVED_SEARCH_PROVIDERS]), { minItems: 1 }),
 	], { description });
+}
+
+function getToolSchemaMode(config: WebSearchConfig): ToolSchemaMode {
+	const value = typeof config.toolSchemaMode === "string" ? config.toolSchemaMode.trim().toLowerCase() : "";
+	return value === "compact" || value === "minimal" ? value : "full";
+}
+
+function getSingleConfiguredProvider(config: WebSearchConfig): ResolvedSearchProvider | undefined {
+	let normalized: SearchProviderSelection | undefined;
+	try {
+		normalized = normalizeProviderInput(config.searchProvider ?? config.provider, `provider in ${WEB_SEARCH_CONFIG_PATH}`);
+	} catch {
+		return undefined;
+	}
+	if (Array.isArray(normalized)) return normalized.length === 1 ? normalized[0] : undefined;
+	if (!normalized || normalized === "auto" || normalized === "all") return undefined;
+	return normalized;
+}
+
+function getConfiguredWorkflow(config: WebSearchConfig): WebSearchWorkflow | undefined {
+	const value = typeof config.workflow === "string" ? config.workflow.trim().toLowerCase() : "";
+	if (value === "none" || value === "summary-review" || value === "auto-summary") return value;
+	return undefined;
+}
+
+function getToolParam(params: unknown, key: string): unknown {
+	if (!params || typeof params !== "object" || Array.isArray(params)) return undefined;
+	return (params as Record<string, unknown>)[key];
 }
 
 function isToolEnabled(config: WebSearchConfig, key: keyof ToolNames): boolean {
@@ -1060,6 +1093,19 @@ export default function (pi: ExtensionAPI) {
 	const initConfig = loadConfigForExtensionInit();
 	installGlobalProxyFetch();
 	const toolNames = resolveToolNames(initConfig);
+	const toolSchemaMode = getToolSchemaMode(initConfig);
+	const compactToolSchemas = toolSchemaMode !== "full";
+	const minimalToolSchemas = toolSchemaMode === "minimal";
+	const lockedProvider = compactToolSchemas ? getSingleConfiguredProvider(initConfig) : undefined;
+	const lockedWorkflow = compactToolSchemas ? getConfiguredWorkflow(initConfig) : undefined;
+	const lockProxy = minimalToolSchemas || (compactToolSchemas && initConfig.proxy !== undefined);
+	const resolveToolProvider = (requested: unknown): SearchProviderSelection => {
+		if (minimalToolSchemas) return resolveRequestedProvider(undefined);
+		if (lockedProvider) return lockedProvider;
+		return resolveRequestedProvider(requested);
+	};
+	const resolveToolProxy = (requested: unknown): string | undefined =>
+		lockProxy ? undefined : (typeof requested === "string" ? requested : undefined);
 	const webSearchEnabled = isToolEnabled(initConfig, "webSearch");
 	const sourceCheckEnabled = isToolEnabled(initConfig, "sourceCheck");
 	const fetchContentEnabled = isToolEnabled(initConfig, "fetchContent");
@@ -1777,38 +1823,42 @@ export default function (pi: ExtensionAPI) {
 	if (webSearchEnabled) pi.registerTool({
 		name: toolNames.webSearch,
 		label: "Web Search",
-		description:
-			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; Kimi search uses a Kimi Code Plan authenticated through /login kimi-coding; xAI search uses a SuperGrok/X Premium subscription or xAI API key; Mistral search uses a Mistral API key. Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches auto-open the interactive browser curator and stream results live; set workflow to "none" to skip curation or "auto-summary" for a model-generated summary without the browser curator. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, SearXNG is preferred first for local/private search. When the active Pi model is openai-codex, Codex-backed OpenAI search is preferred next. Otherwise Exa is preferred before OpenAI, then Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web.`,
-		promptSnippet:
-			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default.",
+		description: compactToolSchemas
+			? "Search the web with the configured provider."
+			: `Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; Kimi search uses a Kimi Code Plan authenticated through /login kimi-coding; xAI search uses a SuperGrok/X Premium subscription or xAI API key; Mistral search uses a Mistral API key. Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches auto-open the interactive browser curator and stream results live; set workflow to "none" to skip curation or "auto-summary" for a model-generated summary without the browser curator. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, SearXNG is preferred first for local/private search. When the active Pi model is openai-codex, Codex-backed OpenAI search is preferred next. Otherwise Exa is preferred before OpenAI, then Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web.`,
+		promptSnippet: compactToolSchemas
+			? "Use for web research; use queries for multiple search angles."
+			: "Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default.",
 		parameters: Type.Object({
-			query: Type.Optional(Type.String({ description: "Single search query. For research tasks, prefer 'queries' with multiple varied angles instead." })),
-			queries: Type.Optional(Type.Array(Type.String(), { description: "Multiple queries searched concurrently (up to three at a time), each returning its own synthesized answer. Prefer this for research — vary phrasing, scope, and angle across 2-4 queries to maximize coverage. Good: ['React vs Vue performance benchmarks 2026', 'React vs Vue developer experience comparison', 'React ecosystem size vs Vue ecosystem']. Bad: ['React vs Vue', 'React vs Vue comparison', 'React vs Vue review'] (too similar, redundant results)." })),
-			numResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 20, description: "Results per query (default: 5, max: 20)" })),
-			includeContent: Type.Optional(Type.Boolean({ description: "Fetch full page content (async)" })),
-			recencyFilter: Type.Optional(
-				StringEnum(["day", "week", "month", "year"], { description: "Filter by recency" }),
-			),
-			domainFilter: Type.Optional(Type.Array(Type.String(), { description: "Limit to domains (prefix with - to exclude)" })),
-			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper, omit this field to use the configured provider, or use auto when none is configured")),
-			workflow: Type.Optional(
-				StringEnum(["none", "summary-review", "auto-summary"], {
+			query: Type.Optional(Type.String(compactToolSchemas ? {} : { description: "Single search query. For research tasks, prefer 'queries' with multiple varied angles instead." })),
+			queries: Type.Optional(Type.Array(Type.String(), compactToolSchemas ? {} : { description: "Multiple queries searched concurrently (up to three at a time), each returning its own synthesized answer. Prefer this for research — vary phrasing, scope, and angle across 2-4 queries to maximize coverage. Good: ['React vs Vue performance benchmarks 2026', 'React vs Vue developer experience comparison', 'React ecosystem size vs Vue ecosystem']. Bad: ['React vs Vue', 'React vs Vue comparison', 'React vs Vue review'] (too similar, redundant results)." })),
+			numResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 20, ...(compactToolSchemas ? {} : { description: "Results per query (default: 5, max: 20)" }) })),
+			includeContent: Type.Optional(Type.Boolean(compactToolSchemas ? {} : { description: "Fetch full page content (async)" })),
+			recencyFilter: Type.Optional(StringEnum(["day", "week", "month", "year"], compactToolSchemas ? {} : { description: "Filter by recency" })),
+			domainFilter: Type.Optional(Type.Array(Type.String(), compactToolSchemas ? {} : { description: "Limit to domains (prefix with - to exclude)" })),
+			...(!minimalToolSchemas && !lockedProvider ? {
+				provider: Type.Optional(searchProviderSchema(compactToolSchemas ? "Search provider override" : "Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper, omit this field to use the configured provider, or use auto when none is configured")),
+			} : {}),
+			...(!minimalToolSchemas && !lockedWorkflow ? {
+				workflow: Type.Optional(StringEnum(["none", "summary-review", "auto-summary"], compactToolSchemas ? {} : {
 					description: "Search workflow mode: none = no curator, summary-review = open curator with auto summary draft (default), auto-summary = generate summary without opening curator",
-				}),
-			),
-			proxy: Type.Optional(Type.String({
-				description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and content fetches). Node fetch ignores HTTP(S)_PROXY env vars, so set this (or `proxy` in web-search.json) when direct access is blocked; empty string forces direct access.",
-			})),
+				})),
+			} : {}),
+			...(!lockProxy ? {
+				proxy: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and content fetches). Node fetch ignores HTTP(S)_PROXY env vars, so set this (or `proxy` in web-search.json) when direct access is blocked; empty string forces direct access.",
+				})),
+			} : {}),
 		}),
 
 		async execute(callId, params, signal, onUpdate, ctx) {
-			return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
+			return runWithProxy(resolveToolProxy(getToolParam(params, "proxy")), async () => {
 				const rawQueryList: unknown[] = Array.isArray(params.queries)
 					? params.queries
 					: (params.query !== undefined ? expandQueryString(params.query) : []);
 				const queryList = normalizeQueryList(rawQueryList);
 				const configWorkflow = loadConfigForExtensionInit().workflow;
-				const workflow = resolveWorkflow(params.workflow ?? configWorkflow, ctx?.hasUI !== false);
+				const workflow = resolveWorkflow(minimalToolSchemas ? configWorkflow : (lockedWorkflow ?? getToolParam(params, "workflow") ?? configWorkflow), ctx?.hasUI !== false);
 				const shouldCurate = workflow === "summary-review";
 				const recencyFilter = normalizeRecencyFilter(params.recencyFilter);
 
@@ -1843,7 +1893,7 @@ export default function (pi: ExtensionAPI) {
 					: searchAbort.signal;
 				let cancelled = false;
 
-				const requestedProvider = resolveRequestedProvider(params.provider);
+				const requestedProvider = resolveToolProvider(getToolParam(params, "provider"));
 				const bootstrap = await loadCuratorBootstrap(requestedProvider, ctx, {
 					numResults: params.numResults,
 					recencyFilter,
@@ -1880,7 +1930,7 @@ export default function (pi: ExtensionAPI) {
 					summaryModels: summaryModelChoices.summaryModels,
 					defaultSummaryModel: summaryModelChoices.defaultSummaryModel,
 					timeoutSeconds: curatorTimeoutSeconds,
-					proxy: typeof params.proxy === "string" ? params.proxy : undefined,
+					proxy: resolveToolProxy(getToolParam(params, "proxy")),
 					onUpdate: onUpdate as PendingCurate["onUpdate"],
 					signal,
 					abortSearches: () => {
@@ -2022,7 +2072,7 @@ export default function (pi: ExtensionAPI) {
 			let completedSearches = 0;
 			const allUrls: string[] = [];
 			const allInlineContent: ExtractedContent[] = [];
-			const resolvedProvider = resolveRequestedProvider(params.provider);
+			const resolvedProvider = resolveToolProvider(getToolParam(params, "provider"));
 
 			const queryResponses = await runSearchQueries(queryList, async (query) => {
 				signal?.throwIfAborted();
@@ -2111,7 +2161,7 @@ export default function (pi: ExtensionAPI) {
 				workflow: workflow === "auto-summary" ? "auto-summary" : undefined,
 				approvedSummary,
 				summaryMeta,
-				proxy: typeof params.proxy === "string" ? params.proxy : undefined,
+				proxy: resolveToolProxy(getToolParam(params, "proxy")),
 			});
 			});
 		},
@@ -2375,22 +2425,31 @@ export default function (pi: ExtensionAPI) {
 	if (sourceCheckEnabled) pi.registerTool({
 		name: toolNames.sourceCheck,
 		label: "Source Check",
-		description: "Check a claim against web sources and return a bounded machine-readable research artifact with exact passage citations.",
-		promptSnippet: "Verify a claim with structured source evidence and passage-level citations.",
+		description: compactToolSchemas
+			? "Verify a claim against web sources."
+			: "Check a claim against web sources and return a bounded machine-readable research artifact with exact passage citations.",
+		promptSnippet: compactToolSchemas
+			? "Verify claims with source evidence."
+			: "Verify a claim with structured source evidence and passage-level citations.",
 		parameters: Type.Object({
-			claim: Type.String({ description: "The assertion to check against web sources." }),
-			queries: Type.Optional(Type.Array(Type.String(), { description: "Search queries (default: the claim)." })),
-			numResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 20, description: "Results per query (default: 5, max: 20)." })),
-			fetchContent: Type.Optional(Type.Boolean({ description: "Fetch up to 5 result pages for exact passage extraction." })),
-			recencyFilter: Type.Optional(StringEnum(["day", "week", "month", "year"], { description: "Filter by recency." })),
-			domainFilter: Type.Optional(Type.Array(Type.String(), { description: "Limit to domains; prefix with - to exclude." })),
-			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; all searches every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper")),
-			proxy: Type.Optional(Type.String({
-				description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and result-page fetches). Empty string forces direct access.",
-			})),
+			claim: Type.String(compactToolSchemas ? {} : { description: "The assertion to check against web sources." }),
+			queries: Type.Optional(Type.Array(Type.String(), compactToolSchemas ? {} : { description: "Search queries (default: the claim)." })),
+			numResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 20, ...(compactToolSchemas ? {} : { description: "Results per query (default: 5, max: 20)." }) })),
+			fetchContent: Type.Optional(Type.Boolean(compactToolSchemas ? {} : { description: "Fetch up to 5 result pages for exact passage extraction." })),
+			recencyFilter: Type.Optional(StringEnum(["day", "week", "month", "year"], compactToolSchemas ? {} : { description: "Filter by recency." })),
+			domainFilter: Type.Optional(Type.Array(Type.String(), compactToolSchemas ? {} : { description: "Limit to domains; prefix with - to exclude." })),
+			...(!minimalToolSchemas && !lockedProvider ? {
+				provider: Type.Optional(searchProviderSchema(compactToolSchemas ? "Search provider override" : "Search provider or non-empty list of providers to search simultaneously; all searches every eligible provider except Parallel MCP, DuckDuckGo, Kimi, AnySearch, XCrawl, Valyu, xAI, Mistral, Bright Data, SerpBase, and Serper")),
+			} : {}),
+			...(!lockProxy ? {
+				proxy: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and result-page fetches). Empty string forces direct access.",
+				})),
+			} : {}),
 		}),
+
 		async execute(_callId, params, signal, _onUpdate, ctx) {
-			return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
+			return runWithProxy(resolveToolProxy(getToolParam(params, "proxy")), async () => {
 				const claim = typeof params.claim === "string" ? params.claim.trim() : "";
 				if (!claim) {
 					return { content: [{ type: "text", text: "Error: 'claim' is required." }], details: { error: "Missing claim" } };
@@ -2416,7 +2475,7 @@ export default function (pi: ExtensionAPI) {
 					if (signal?.aborted) break;
 					try {
 						const response = await search(query, {
-							provider: resolveRequestedProvider(params.provider),
+							provider: resolveToolProvider(getToolParam(params, "provider")),
 							numResults,
 							recencyFilter,
 							domainFilter,
@@ -2440,7 +2499,7 @@ export default function (pi: ExtensionAPI) {
 				if (params.fetchContent && results.length > 0) {
 					const urls = results.slice(0, 5).map((result) => result.url);
 					try {
-						fetched = await fetchAllContent(urls, signal, withRegisteredFetchOptions(undefined, registeredToolNames, typeof params.proxy === "string" ? params.proxy : undefined));
+						fetched = await fetchAllContent(urls, signal, withRegisteredFetchOptions(undefined, registeredToolNames, resolveToolProxy(getToolParam(params, "proxy"))));
 					} catch (err) {
 						if (signal?.aborted || isAbortError(err)) throw err;
 						fetched = urls.map((url) => ({ url, title: "", content: "", error: err instanceof Error ? err.message : String(err) }));
@@ -2474,47 +2533,57 @@ export default function (pi: ExtensionAPI) {
 	if (fetchContentEnabled) pi.registerTool({
 		name: toolNames.fetchContent,
 		label: "Fetch Content",
-		description: `Fetch URL(s) and extract readable content as markdown. Use mode "raw" for exact textual HTTP response bodies or mode "answer" with prompt to answer using only fetched content. Direct image URLs return resized image content. Supports YouTube transcripts, GitHub repositories, PDFs, and local videos. ${fetchContentStorageNote}`,
-		promptSnippet:
-			"Use to fetch readable or raw URL content, direct images, GitHub repos, and videos. Mode answer answers a prompt using only the fetched source.",
+		description: compactToolSchemas
+			? "Fetch and extract URL content."
+			: `Fetch URL(s) and extract readable content as markdown. Use mode "raw" for exact textual HTTP response bodies or mode "answer" with prompt to answer using only fetched content. Direct image URLs return resized image content. Supports YouTube transcripts, GitHub repositories, PDFs, and local videos. ${fetchContentStorageNote}`,
+		promptSnippet: compactToolSchemas
+			? "Fetch URL content."
+			: "Use to fetch readable or raw URL content, direct images, GitHub repos, and videos. Mode answer answers a prompt using only the fetched source.",
 		parameters: Type.Object({
-			url: Type.Optional(Type.String({ description: "Single URL to fetch" })),
-			urls: Type.Optional(Type.Array(Type.String(), { description: "Multiple URLs (parallel)" })),
-			forceClone: Type.Optional(Type.Boolean({
-				description: "Force cloning large GitHub repositories that exceed the size threshold",
-			})),
-			prompt: Type.Optional(Type.String({
-				description: "Question or instruction for video analysis, or the page-local question required by mode answer.",
-			})),
-			mode: Type.Optional(StringEnum(["readable", "raw", "answer"], {
-				description: "Fetch mode: readable (default extraction), raw (exact textual HTTP body), or answer (answer prompt using only fetched content).",
-			})),
-			answerModel: Type.Optional(Type.String({
-				description: "Optional provider/model-id override for mode answer. Defaults to fetch.answerProvider + fetch.answerModel when configured, otherwise the current Pi model.",
-			})),
-			timestamp: Type.Optional(Type.String({
-				description: "Extract video frame(s) at a timestamp or time range. Single: '1:23:45', '23:45', or '85' (seconds). Range: '23:41-25:00' extracts evenly-spaced frames across that span (default 6). Use frames with ranges to control density; single+frames uses a fixed 5s interval. YouTube requires yt-dlp + ffmpeg; local videos require ffmpeg. Use a range when you know the approximate area but not the exact moment — you'll get a contact sheet to visually identify the right frame.",
-			})),
-			frames: Type.Optional(Type.Integer({
-				minimum: 1,
-				maximum: 12,
-				description: "Number of frames to extract. Use with timestamp range for custom density, with single timestamp to get N frames at 5s intervals, or alone to sample across the entire video. Requires yt-dlp + ffmpeg for YouTube, ffmpeg for local video.",
-			})),
-			model: Type.Optional(Type.String({
-				description: "Override the Gemini model for video/YouTube analysis (e.g. 'gemini-3.6-flash'). Defaults to config or gemini-3.6-flash.",
-			})),
-			auth: Type.Optional(Type.Union([Type.String(), Type.Boolean()], {
-				description: "Opt into an authFetch profile for local browser-cookie fetching. Use a profile name, or true only when exactly one profile exists.",
-			})),
-			proxy: Type.Optional(Type.String({
-				description: "http(s) proxy URL (e.g. http://host:port) used for this fetch. Needed when the target is unreachable directly; localhost and NO_PROXY hosts always bypass the proxy. Empty string forces direct access.",
-			})),
+			url: Type.Optional(Type.String(compactToolSchemas ? {} : { description: "Single URL to fetch" })),
+			urls: Type.Optional(Type.Array(Type.String(), compactToolSchemas ? {} : { description: "Multiple URLs (parallel)" })),
+			...(!minimalToolSchemas ? {
+				forceClone: Type.Optional(Type.Boolean(compactToolSchemas ? {} : {
+					description: "Force cloning large GitHub repositories that exceed the size threshold",
+				})),
+				prompt: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "Question or instruction for video analysis, or the page-local question required by mode answer.",
+				})),
+				mode: Type.Optional(StringEnum(["readable", "raw", "answer"], compactToolSchemas ? {} : {
+					description: "Fetch mode: readable (default extraction), raw (exact textual HTTP body), or answer (answer prompt using only fetched content).",
+				})),
+				answerModel: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "Optional provider/model-id override for mode answer. Defaults to fetch.answerProvider + fetch.answerModel when configured, otherwise the current Pi model.",
+				})),
+				timestamp: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "Extract video frame(s) at a timestamp or time range. Single: '1:23:45', '23:45', or '85' (seconds). Range: '23:41-25:00' extracts evenly-spaced frames across that span (default 6). Use frames with ranges to control density; single+frames uses a fixed 5s interval. YouTube requires yt-dlp + ffmpeg; local videos require ffmpeg. Use a range when you know the approximate area but not the exact moment — you'll get a contact sheet to visually identify the right frame.",
+				})),
+				frames: Type.Optional(Type.Integer({
+					minimum: 1,
+					maximum: 12,
+					...(compactToolSchemas ? {} : { description: "Number of frames to extract. Use with timestamp range for custom density, with single timestamp to get N frames at 5s intervals, or alone to sample across the entire video. Requires yt-dlp + ffmpeg for YouTube, ffmpeg for local video." }),
+				})),
+				model: Type.Optional(Type.String(compactToolSchemas ? {} : {
+					description: "Override the Gemini model for video/YouTube analysis (e.g. 'gemini-3.6-flash'). Defaults to config or gemini-3.6-flash.",
+				})),
+				auth: Type.Optional(Type.Union([Type.String(), Type.Boolean()], compactToolSchemas ? {} : {
+					description: "Opt into an authFetch profile for local browser-cookie fetching. Use a profile name, or true only when exactly one profile exists.",
+				})),
+				...(!lockProxy ? {
+					proxy: Type.Optional(Type.String(compactToolSchemas ? {} : {
+						description: "http(s) proxy URL (e.g. http://host:port) used for this fetch. Needed when the target is unreachable directly; localhost and NO_PROXY hosts always bypass the proxy. Empty string forces direct access.",
+					})),
+				} : {}),
+			} : {}),
 		}),
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
 			let normalized: ReturnType<typeof normalizeFetchContentParams>;
 			try {
-				normalized = normalizeFetchContentParams(params);
+				const fetchParams = minimalToolSchemas
+					? { url: params.url, urls: params.urls }
+					: (lockProxy ? { ...params, proxy: undefined } : params);
+				normalized = normalizeFetchContentParams(fetchParams);
 			} catch (err) {
 				const error = err instanceof Error ? err.message : String(err);
 				return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
@@ -2816,25 +2885,28 @@ export default function (pi: ExtensionAPI) {
 	if (getSearchContentEnabled) {
 		const maxInlineContentChars = getMaxInlineContentChars(initConfig);
 		pi.registerTool({
-		name: toolNames.getSearchContent,
-		label: "Get Search Content",
-		description: `Retrieve bounded content slices or find matching passages in a previous ${storedContentSources} call.`,
-		promptSnippet:
-			`Use after ${storedContentSources} to retrieve stored content via responseId. Use findText to locate passages without paging through the full content.`,
-		parameters: Type.Object({
-			responseId: Type.String({ description: `The responseId from ${storedContentSources}` }),
-			query: Type.Optional(Type.String({ description: searchQueryDescription })),
-			queryIndex: Type.Optional(Type.Integer({ minimum: 0, description: "Get content for query at index" })),
-			url: Type.Optional(Type.String({ description: "Get content for this URL" })),
-			urlIndex: Type.Optional(Type.Integer({ minimum: 0, description: "Get content for URL at index" })),
-			offset: Type.Optional(Type.Integer({ minimum: 0, description: "Character offset for fetched URL content slices (default 0). Ignored when findText is supplied." })),
-			limit: Type.Optional(Type.Integer({ minimum: 1, maximum: maxInlineContentChars, description: "Maximum characters to return for fetched URL content slices (default and max are set by maxInlineContentChars). Ignored when findText is supplied." })),
-			findText: Type.Optional(Type.Union([
-				Type.String({ minLength: 1, maxLength: 500 }),
-				Type.Array(Type.String({ minLength: 1, maxLength: 500 }), { minItems: 1, maxItems: 10 }),
-			], { description: "Text or texts to find in the selected stored content. When supplied, offset and limit are ignored." })),
-			findMode: Type.Optional(StringEnum(["exact", "case-insensitive", "fuzzy"], { description: "Matching mode for findText (default: case-insensitive). Requires findText." })),
-		}),
+			name: toolNames.getSearchContent,
+			label: "Get Search Content",
+			description: compactToolSchemas
+				? "Retrieve stored web content by responseId."
+				: `Retrieve bounded content slices or find matching passages in a previous ${storedContentSources} call.`,
+			promptSnippet: compactToolSchemas
+				? "Retrieve stored content by responseId."
+				: `Use after ${storedContentSources} to retrieve stored content via responseId. Use findText to locate passages without paging through the full content.`,
+			parameters: Type.Object({
+				responseId: Type.String(compactToolSchemas ? {} : { description: `The responseId from ${storedContentSources}` }),
+				query: Type.Optional(Type.String(compactToolSchemas ? {} : { description: searchQueryDescription })),
+				queryIndex: Type.Optional(Type.Integer({ minimum: 0, ...(compactToolSchemas ? {} : { description: "Get content for query at index" }) })),
+				url: Type.Optional(Type.String(compactToolSchemas ? {} : { description: "Get content for this URL" })),
+				urlIndex: Type.Optional(Type.Integer({ minimum: 0, ...(compactToolSchemas ? {} : { description: "Get content for URL at index" }) })),
+				offset: Type.Optional(Type.Integer({ minimum: 0, ...(compactToolSchemas ? {} : { description: "Character offset for fetched URL content slices (default 0). Ignored when findText is supplied." }) })),
+				limit: Type.Optional(Type.Integer({ minimum: 1, maximum: maxInlineContentChars, ...(compactToolSchemas ? {} : { description: "Maximum characters to return for fetched URL content slices (default and max are set by maxInlineContentChars). Ignored when findText is supplied." }) })),
+				findText: Type.Optional(Type.Union([
+					Type.String({ minLength: 1, maxLength: 500 }),
+					Type.Array(Type.String({ minLength: 1, maxLength: 500 }), { minItems: 1, maxItems: 10 }),
+				], compactToolSchemas ? {} : { description: "Text or texts to find in the selected stored content. When supplied, offset and limit are ignored." })),
+				findMode: Type.Optional(StringEnum(["exact", "case-insensitive", "fuzzy"], compactToolSchemas ? {} : { description: "Matching mode for findText (default: case-insensitive). Requires findText." })),
+			}),
 
 		async execute(_toolCallId, rawParams): Promise<AgentToolResult<Record<string, unknown>>> {
 			const params = normalizeGetSearchContentParams(rawParams);

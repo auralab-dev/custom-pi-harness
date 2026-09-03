@@ -65,6 +65,24 @@ To route automatic searches through the active Pi model, configure an ordered ro
 
 With `useCurrentModel: true`, the automatic `openai` step uses Hosted `web_search` when the active model is a GPT model backed by an official OpenAI Responses endpoint: `openai`/`openai-responses` on HTTPS `api.openai.com`, or `openai-codex`/`openai-codex-responses` on the official ChatGPT Codex endpoint. Third-party gateways, Azure, and other models continue to the next route entry. A tool-level `provider` or top-level `provider` remains an explicit override; `provider: "openai"` keeps the existing independent OpenAI/Codex search-model behavior.
 
+### Reduce LLM tool-schema tokens
+
+This fork adds `toolSchemaMode` to reduce the tool definitions sent with every model request:
+
+```json
+{
+  "provider": "brave",
+  "workflow": "none",
+  "toolSchemaMode": "compact"
+}
+```
+
+- `"full"` (default) preserves the upstream schemas and behavior.
+- `"compact"` keeps the normal tool capabilities but removes verbose parameter descriptions. If a single concrete top-level provider is configured, the `provider` parameter is removed from `web_search` and `source_check` and that provider is locked for LLM tool calls. A configured `workflow` and `proxy` are also removed from the LLM schema and taken from config instead.
+- `"minimal"` is the smallest LLM surface. Search provider/workflow/proxy selection is always hidden, and `fetch_content` exposes only `url`/`urls` (readable mode). This intentionally removes advanced fetch controls from model tool calls.
+
+`toolSchemaMode` affects the LLM-facing tool contract, not the curator UI or package-internal provider implementations. Restart Pi after changing the mode or a locked provider so the registered schemas are rebuilt.
+
 For sandboxed networks that provide outbound proxy transport through environment variables, set `ssrf.trustEnvProxy` to `true` to skip local DNS preflight for proxied hostnames:
 
 ```json
