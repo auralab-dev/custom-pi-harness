@@ -1,0 +1,13 @@
+{
+  "pdf": {
+    "nativeBackend": "pymupdf4llm",
+    "ocrBackend": "paddle",
+    "probePages": 12,
+    "minTextCharsPerPage": 80,
+    "minTextPageRatio": 0.6,
+    "paddle": {
+      "textRecognitionModel": "latin_PP-OCRv5_mobile_rec"
+    },
+    "glmOcrCommand": ""
+  }
+}

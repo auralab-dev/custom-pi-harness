@@ -1,0 +1,10 @@
+auth.json
+sessions/
+models-store.json
+trust.json
+bin/
+web-documents/
+zvec-grep/
+zvec-project-indexes/
+document-convert/venv/
+downloads/

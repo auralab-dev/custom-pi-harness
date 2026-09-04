@@ -1,0 +1,16 @@
+packages:
+  - pi-web-access-main
+  - pi-zvec-content
+  - pi-document-convert
+
+allowBuilds:
+  '@google/genai': false
+  protobufjs: false
+
+  '@zvec/zvec': true
+  onnxruntime-node: true
+  sharp: true
+
+  # Optional dependency of zvec-grep; not needed for
+  # local/potion-retrieval-32m embeddings.
+  node-llama-cpp: false

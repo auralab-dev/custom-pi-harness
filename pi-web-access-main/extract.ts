@@ -314,6 +314,10 @@ export interface ExtractedContent {
 	duration?: number;
 	mimeType?: string;
 	status?: number;
+	/** Internal temporary source document path for project-local persistence. */
+	sourcePath?: string;
+	/** Internal temporary conversion metadata path for project-local persistence. */
+	conversionMetadataPath?: string;
 }
 
 type HttpExtractedContent = ExtractedContent & { declaredLinks?: DeclaredWebLink[] };
@@ -1241,6 +1245,8 @@ async function extractViaHttp(
 					title: result.title,
 					content: `PDF extracted and saved to: ${result.outputPath}\n\nPages: ${result.pages}\nCharacters: ${result.chars}`,
 					error: null,
+					...(result.sourcePath ? { sourcePath: result.sourcePath } : {}),
+					...(result.metadataPath ? { conversionMetadataPath: result.metadataPath } : {}),
 				};
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);

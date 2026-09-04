@@ -1,0 +1,22 @@
+{
+  "name": "pi-zvec-content",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Bounded zvec-grep content search for Pi without direct file reads.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@zvec/zvec-grep": "^0.2.1",
+    "typebox": "^1.1.38"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

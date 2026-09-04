@@ -1,0 +1,10 @@
+{
+  "provider": "exa",
+  "workflow": "none",
+  "toolSchemaMode": "minimal",
+  "exaApiKey": "0c530422-8d1f-439f-91f0-7e63034f4a47",
+  "pdf": {
+    "provider": "document-convert",
+    "maxSizeMB": 50
+  }
+}

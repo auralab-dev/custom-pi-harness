@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { CredentialResolutionError } from "./credential-source.ts";
@@ -29,6 +30,9 @@ export interface PDFExtractResult {
 	pages: number;
 	chars: number;
 	outputPath: string;
+	sourcePath?: string;
+	metadataPath?: string;
+	converter?: string;
 }
 
 export interface PDFExtractOptions {
@@ -39,13 +43,14 @@ export interface PDFExtractOptions {
 	geminiTimeoutMs?: number;
 }
 
-export type PDFProvider = "auto" | "gemini" | "datalab" | "unpdf";
+export type PDFProvider = "auto" | "gemini" | "datalab" | "unpdf" | "document-convert";
 
 export const PDF_PROVIDER_VALUES = new Set<PDFProvider>([
 	"auto",
 	"gemini",
 	"datalab",
 	"unpdf",
+	"document-convert",
 ]);
 
 export interface PDFConfig {
@@ -64,6 +69,74 @@ const DEFAULT_MAX_PAGES = 100;
 const DEFAULT_OUTPUT_DIR = join(tmpdir(), "pi-web-pdf");
 const CONFIG_PATH = getWebSearchConfigPath();
 const PAGE_MARKER_PATTERN = /^<!-- Page (\d+) -->$/gm;
+
+
+const DOCUMENT_CONVERTER_MAX_CAPTURE = 64_000;
+
+async function extractPDFViaDocumentConverter(
+	buffer: ArrayBuffer,
+	url: string,
+	options: { outputDir: string; filename?: string; signal?: AbortSignal; maxPages?: number },
+): Promise<PDFExtractResult> {
+	const command = process.env.PI_DOCUMENT_CONVERT_CMD?.trim();
+	if (!command) {
+		throw new Error("pdf.provider=document-convert requires PI_DOCUMENT_CONVERT_CMD");
+	}
+	const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+	await mkdir(options.outputDir, { recursive: true });
+	const sourcePath = join(options.outputDir, `${id}.pdf`);
+	const outputPath = join(options.outputDir, options.filename || `${id}.md`);
+	const metadataPath = join(options.outputDir, `${id}.conversion.json`);
+	await writeFile(sourcePath, new Uint8Array(buffer), { mode: 0o600 });
+
+	const args = [command, "--input", sourcePath, "--output", outputPath, "--metadata", metadataPath, "--source-url", url];
+	if (Number.isInteger(options.maxPages) && (options.maxPages as number) > 0) {
+		args.push("--max-pages", String(options.maxPages));
+	}
+	const result = await new Promise<{ stdout: string; stderr: string }>((resolvePromise, reject) => {
+		const child = spawn(process.execPath, args, {
+			stdio: ["ignore", "pipe", "pipe"],
+			env: process.env,
+		});
+		let stdout = "";
+		let stderr = "";
+		const capture = (current: string, chunk: Buffer | string) => {
+			if (current.length >= DOCUMENT_CONVERTER_MAX_CAPTURE) return current;
+			const text = String(chunk);
+			return current + text.slice(0, DOCUMENT_CONVERTER_MAX_CAPTURE - current.length);
+		};
+		child.stdout?.on("data", (chunk) => { stdout = capture(stdout, chunk); });
+		child.stderr?.on("data", (chunk) => { stderr = capture(stderr, chunk); });
+		const abort = () => child.kill("SIGTERM");
+		if (options.signal) {
+			if (options.signal.aborted) abort();
+			else options.signal.addEventListener("abort", abort, { once: true });
+		}
+		child.on("error", reject);
+		child.on("close", (code) => {
+			options.signal?.removeEventListener("abort", abort);
+			if (options.signal?.aborted) return reject(new Error("PDF conversion aborted"));
+			if (code !== 0) return reject(new Error((stderr.trim() || stdout.trim() || `converter exited ${code}`).slice(-4000)));
+			resolvePromise({ stdout, stderr });
+		});
+	});
+
+	let parsed: Record<string, unknown>;
+	try {
+		parsed = JSON.parse(result.stdout.trim()) as Record<string, unknown>;
+	} catch {
+		throw new Error(`Document converter returned invalid JSON: ${result.stdout.slice(-1000)}`);
+	}
+	return {
+		title: typeof parsed.title === "string" ? parsed.title : extractTitleFromURL(url),
+		pages: typeof parsed.pages === "number" ? parsed.pages : 0,
+		chars: typeof parsed.chars === "number" ? parsed.chars : 0,
+		outputPath,
+		sourcePath,
+		metadataPath,
+		converter: typeof parsed.converter === "string" ? parsed.converter : "document-convert",
+	};
+}
 
 export function loadPDFConfig(): PDFConfig {
 	if (!existsSync(CONFIG_PATH)) {
@@ -181,6 +254,15 @@ export async function extractPDFToMarkdown(
 				: DEFAULT_MAX_PAGES;
 	const urlTitle = extractTitleFromURL(url);
 	const provider = pdfConfig.provider;
+
+	if (provider === "document-convert") {
+		return extractPDFViaDocumentConverter(buffer, url, {
+			outputDir,
+			filename,
+			...(signal ? { signal } : {}),
+			...(maxPages !== undefined ? { maxPages: Math.max(1, Math.floor(maxPages)) } : {}),
+		});
+	}
 
 	if (provider === "auto" || provider === "datalab") {
 		try {

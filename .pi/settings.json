@@ -1,0 +1,15 @@
+{
+  "defaultTools": [
+    "find"
+  ],
+  "packages": [
+    "npm:pi-session-trace",
+    "../pi-web-access-main",
+    "../pi-zvec-content"
+  ],
+  "defaultProvider": "opencode",
+  "defaultModel": "muse-spark-1.3-contributor-free",
+  "skills": [],
+  "lastChangelogVersion": "0.84.4",
+  "theme": "light"
+}
