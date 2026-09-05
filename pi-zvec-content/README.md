@@ -27,7 +27,7 @@ Behavior:
 }
 ```
 
-Requires Node.js 22+ and `npm install` in this package.
+Requires Node.js 22.19+ and `pnpm install` at the harness root.
 
 ## Runtime mode
 

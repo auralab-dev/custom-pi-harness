@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_PADDLE=0
-PYTHON_BIN="${PYTHON_BIN:-python3.12}"
+PYTHON_BIN="${PYTHON_BIN:-}"
 
 timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
@@ -48,11 +48,20 @@ command -v node >/dev/null 2>&1 || {
   exit 1
 }
 
-command -v "$PYTHON_BIN" >/dev/null 2>&1 || {
-  error "$PYTHON_BIN is required but was not found in PATH"
-  error "Install Python 3.12, or run with PYTHON_BIN=/path/to/python3.12 ./install.sh"
+if [[ -z "$PYTHON_BIN" ]]; then
+  for candidate in python3.12 python3.11 python3; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      PYTHON_BIN="$candidate"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$PYTHON_BIN" ]] || ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+  error "Python 3.11+ is required but was not found in PATH"
+  error "Install Python 3.11+, or run with PYTHON_BIN=/path/to/python ./install.sh"
   exit 1
-}
+fi
 
 PNPM_WORKSPACE="$ROOT/pnpm-workspace.yaml"
 
@@ -61,8 +70,8 @@ if [[ ! -f "$PNPM_WORKSPACE" ]]; then
   exit 1
 fi
 
-if [[ ! -d "$ROOT/pi-web-access-main" ]]; then
-  error "Missing package directory: $ROOT/pi-web-access-main"
+if [[ ! -d "$ROOT/pi-web-access" ]]; then
+  error "Missing package directory: $ROOT/pi-web-access"
   exit 1
 fi
 
@@ -94,7 +103,7 @@ log "Using pnpm workspace: $PNPM_WORKSPACE"
 log "Installing Node workspace dependencies"
 (
   cd "$ROOT"
-  pnpm install
+  pnpm install --frozen-lockfile
 )
 
 VENV_ROOT="$ROOT/.pi/document-convert"

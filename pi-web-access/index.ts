@@ -86,6 +86,36 @@ import {
 
 type ExtensionTheme = ExtensionContext["ui"]["theme"];
 
+// The minimal Paperclip profile intentionally publishes a reduced TypeBox
+// schema, but the implementation still supports the full upstream request
+// shape. Keep the runtime parameter type explicit so TypeScript does not infer
+// the callback from only the minimal branch of the schema conditional.
+type WebSearchToolParams = {
+	query?: string;
+	queries?: string[];
+	numResults?: number;
+	includeContent?: boolean;
+	recencyFilter?: unknown;
+	domainFilter?: string[];
+	provider?: unknown;
+	workflow?: unknown;
+	proxy?: string;
+};
+
+type FetchContentToolParams = {
+	url?: string;
+	urls?: string[];
+	forceClone?: boolean;
+	prompt?: string;
+	mode?: unknown;
+	answerModel?: string;
+	timestamp?: string;
+	frames?: number;
+	model?: string;
+	auth?: unknown;
+	proxy?: string;
+};
+
 const WEB_SEARCH_CONFIG_PATH = getWebSearchConfigPath();
 
 let extractModulePromise: Promise<typeof import("./extract.ts")> | undefined;
@@ -1814,7 +1844,8 @@ export default function (pi: ExtensionAPI) {
 			})),
 		}),
 
-		async execute(callId, params, signal, onUpdate, ctx) {
+		async execute(callId, rawParams, signal, onUpdate, ctx) {
+			let params = rawParams as WebSearchToolParams;
 			if (minimalToolSchemas) params = { query: params.query } as typeof params;
 			return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
 				const rawQueryList: unknown[] = Array.isArray(params.queries)
@@ -2530,7 +2561,8 @@ export default function (pi: ExtensionAPI) {
 			})),
 		}),
 
-		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
+		async execute(_toolCallId, rawParams, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
+			const params = rawParams as FetchContentToolParams;
 			if (minimalToolSchemas) {
 				const url = typeof params.url === "string" ? params.url.trim() : "";
 				if (!url) throw new Error("download_file requires url");

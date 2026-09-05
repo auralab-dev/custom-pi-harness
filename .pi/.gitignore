@@ -1,5 +1,6 @@
 auth.json
 sessions/
+agents/
 models-store.json
 trust.json
 bin/
@@ -8,3 +9,7 @@ zvec-grep/
 zvec-project-indexes/
 document-convert/venv/
 downloads/
+mcp-cache.json
+mcp-traces/
+paperclip-mcp-artifacts/
+paperclip-mcp-telemetry-*.jsonl

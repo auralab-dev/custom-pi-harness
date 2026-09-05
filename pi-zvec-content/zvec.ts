@@ -12,6 +12,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import type { Stats } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   basename,
@@ -118,7 +119,7 @@ function resolveZgCli(): string {
   try {
     entry = fileURLToPath(import.meta.resolve("@zvec/zvec-grep"));
   } catch {
-    throw new Error("zvec-grep is not installed; run npm install in pi-zvec-content");
+    throw new Error("zvec-grep is not installed; run pnpm install at the harness root");
   }
   const cli = join(dirname(entry), "cli", "index.js");
   if (!existsSync(cli)) throw new Error("zvec-grep CLI not found");
@@ -617,7 +618,7 @@ function indexMetaPath(target: Target): string {
   return join(target.indexDir, ".pi-zvec-wrapper.json");
 }
 
-function sameProjectionMeta(meta: Record<string, unknown> | null, target: Target, stat: ReturnType<typeof statSync>): boolean {
+function sameProjectionMeta(meta: Record<string, unknown> | null, target: Target, stat: Stats): boolean {
   return Boolean(meta
     && meta.version === WRAPPER_INDEX_VERSION
     && meta.sourcePath === target.targetPath
@@ -631,6 +632,7 @@ function prepareIndex(target: Target): void {
   ensurePrivateDirectory(target.indexDir);
   const sourceRoot = join(target.indexDir, "source");
   const stat = statSync(target.targetPath);
+  if (!stat) throw new Error("target disappeared while preparing zvec index");
   const metaPath = projectionMetaPath(target);
   const oldMeta = readJsonObject(metaPath);
 

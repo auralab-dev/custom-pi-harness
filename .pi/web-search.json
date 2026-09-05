@@ -2,8 +2,6 @@
   "provider": "tinyfish",
   "workflow": "none",
   "toolSchemaMode": "minimal",
-  "exaApiKey": "0c530422-8d1f-439f-91f0-7e63034f4a47",
-  "tinyfishApiKey": "sk-tinyfish-61r0S_oCe9mYSG2pGAvCipBqgTvrzID5",
   "pdf": {
     "provider": "document-convert",
     "maxSizeMB": 50

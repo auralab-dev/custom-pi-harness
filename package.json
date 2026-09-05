@@ -1,22 +1,26 @@
 {
-  "name": "pi-zvec-content",
-  "version": "0.2.0",
+  "name": "pi-harness",
+  "version": "0.1.0",
   "private": true,
-  "description": "Bounded zvec-grep content search for Pi without direct file reads.",
+  "description": "Production Pi runtime profile for Paperclip with web, zvec, and Paperclip MCP integrations.",
   "type": "module",
+  "packageManager": "pnpm@11.24.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "check": "pnpm run typecheck && pnpm run check:config",
+    "check:config": "node scripts/check-config.mjs",
+    "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck"
   },
   "dependencies": {
+    "@earendil-works/pi-ai": "0.84.4",
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "@earendil-works/pi-tui": "0.84.4",
     "@zvec/zvec-grep": "^0.2.1",
+    "paperclip-mcp-server": "github:auralab-dev/paperclip-mcp#89510c92ae1dde76e305a2327b32c09f8e487ddc",
+    "pi-mcp-adapter": "2.32.1",
+    "pi-session-trace": "0.1.5",
     "typebox": "^1.1.38"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  },
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
   }
 }

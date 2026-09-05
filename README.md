@@ -1,38 +1,55 @@
-# Pi content stack
+# Pi harness for Paperclip
 
-Model-facing tools in the included profile:
+A reproducible [Pi coding agent](https://github.com/badlogic/pi-mono) runtime
+profile used by Paperclip. It keeps Paperclip skills enabled, adds web and
+content-retrieval tools, and exposes Paperclip through MCP while disabling Pi's
+direct file and shell tools.
+
+## Included packages
+
+- `pi-web-access` — `web_search` and `download_file`, adapted from
+  [nicobailon/pi-web-access](https://github.com/nicobailon/pi-web-access) by
+  Nico Bailon.
+- `pi-zvec-content` — bounded `file_content_search` powered by
+  [zvec-ai/zvec-grep](https://github.com/zvec-ai/zvec-grep/).
+- `pi-document-convert` — local PDF and document conversion used by downloads.
+- [`paperclip-mcp-server`](https://github.com/auralab-dev/paperclip-mcp) —
+  compact Paperclip API tools exposed through `pi-mcp-adapter`.
+- `pi-session-trace` — session diagnostics.
+
+The resulting model-facing content tools are:
 
 ```text
 find
-web_search(query)
-download_file(url)
-file_content_search(path, query)
+web_search
+download_file
+file_content_search
+paperclip_* (direct MCP tools)
 ```
 
-`read`, `read_file`, `grep`, and `bash` are not enabled by the project profile.
+Pi built-ins `read`, `bash`, `edit`, `write`, `grep`, and `ls` are excluded.
 
-## Install
+## Install and run
 
-Requires Node.js 22+ for zvec-grep.
+Requires Node.js 22.19+, pnpm 11, and Python 3.11+.
 
 ```bash
-cd pi-web-access-main && npm install
-cd ../pi-zvec-content && npm install
-cd ..
+cp .env.local.example .env.local
+# Add provider credentials to the ignored .env.local file.
+./install.sh
 ./run-pi-local.sh
 ```
 
-## Flow
+The launcher may be called from another workspace. It preserves that working
+directory and stores mutable Pi state under
+`PI_HARNESS_STATE_ROOT/<PAPERCLIP_AGENT_ID>`.
 
-1. `web_search` uses configured Exa search.
-2. `download_file` downloads/extracts one URL and returns only `.pi/downloads/<id>/content.md`.
-3. For PDFs, the actual temporary extracted Markdown is copied into that project-local file; the small pi-web-access PDF receipt is never used as searchable content.
-4. `file_content_search` searches any project-relative file/directory using bounded zvec results.
-5. Polish retrieval uses `local/potion-multilingual-128m`; hybrid and lexical candidate sets are fused before evidence expansion.
-6. zvec is used as a locator/ranker: the wrapper privately reopens only ranked source ranges and keeps the model-visible result under `maxResultChars`.
-7. Page-marked PDF Markdown is projected privately into per-page search files; HTML tables become explicit row records for retrieval.
-8. Concurrent searches against the same target are serialized.
-9. Regex-like queries use zvec managed ripgrep.
-10. zvec process failures are real Pi tool errors and include bounded path-redacted diagnostics.
+## Paperclip runtime
 
-Runtime state stays under `.pi/` except transient upstream extraction work in the OS temp directory; PDF temp Markdown is removed after it is copied into `.pi/downloads/`.
+Paperclip supplies `PAPERCLIP_*` variables when launching the harness. The local
+MCP server receives only its explicit environment allowlist. TinyFish and model
+provider credentials are not forwarded to the MCP process.
+
+The checked-in configuration uses the TinyFish minimal profile. Secrets belong
+only in the ignored `.env.local` file or the deployment secret store; never add
+them to JSON configuration or Git history.

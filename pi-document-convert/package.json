@@ -9,6 +9,6 @@
     "pi-document-convert": "./cli.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.19.0"
   }
 }
