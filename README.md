@@ -16,6 +16,7 @@ direct file and shell tools.
 - [`paperclip-mcp-server`](https://github.com/auralab-dev/paperclip-mcp) —
   compact Paperclip API tools exposed through `pi-mcp-adapter`.
 - `pi-session-trace` — session diagnostics.
+- `@agnishc/edb-context-viewer@0.21.1` — `/context` TUI overlay (Stats/System/Tools/Messages/Full), human debug only.
 
 The resulting model-facing content tools are:
 

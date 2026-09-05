@@ -230,6 +230,7 @@ args=(
   --extension "$ROOT/pi-web-access/index.ts"
   --extension "$ROOT/pi-zvec-content/index.ts"
   --extension "$ROOT/pi-workspace-boundary/index.ts"
+  --extension "$ROOT/node_modules/@agnishc/edb-context-viewer/src/index.ts"
   --extension "$ROOT/node_modules/pi-mcp-adapter/index.ts"
   --mcp-config "$PI_HARNESS_MCP_CONFIG"
 )

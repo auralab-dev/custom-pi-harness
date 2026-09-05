@@ -61,6 +61,9 @@ if (launcher.includes('export PI_CODING_AGENT_DIR=') || launcher.includes('PI_CO
 if (!launcher.includes('--extension "$ROOT/pi-workspace-boundary/index.ts"')) {
   throw new Error("run-pi-local.sh must load the read/find workspace boundary");
 }
+if (!launcher.includes('--extension "$ROOT/node_modules/@agnishc/edb-context-viewer/src/index.ts"')) {
+  throw new Error("run-pi-local.sh must load the edb context viewer extension");
+}
 if (launcher.includes('PI_HARNESS_EXCLUDE_TOOLS:-read,')) {
   throw new Error("run-pi-local.sh must keep bounded read enabled by default");
 }
@@ -85,6 +88,12 @@ if (packageJson.packageManager !== "pnpm@11.24.0") {
 }
 if (!/^github:auralab-dev\/paperclip-mcp#[0-9a-f]{40}$/.test(packageJson.dependencies?.["paperclip-mcp-server"] ?? "")) {
   throw new Error("paperclip-mcp-server must be pinned to a full Git commit SHA");
+}
+if (packageJson.dependencies?.["@agnishc/edb-context-viewer"] !== "0.21.1") {
+  throw new Error("@agnishc/edb-context-viewer must be pinned to exactly 0.21.1");
+}
+if (!repoSettings.packages?.includes("../node_modules/@agnishc/edb-context-viewer")) {
+  throw new Error('.pi/settings.json packages must include ../node_modules/@agnishc/edb-context-viewer');
 }
 
 console.log("Harness configuration checks passed");

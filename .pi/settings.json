@@ -4,6 +4,7 @@
     "find"
   ],
   "packages": [
+    "../node_modules/@agnishc/edb-context-viewer",
     "../node_modules/pi-session-trace",
     "../pi-web-access",
     "../pi-zvec-content",

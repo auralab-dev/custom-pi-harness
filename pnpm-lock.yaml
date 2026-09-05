@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@agnishc/edb-context-viewer':
+        specifier: 0.21.1
+        version: 0.21.1(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4)
       '@earendil-works/pi-ai':
         specifier: 0.84.4
         version: 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
@@ -100,6 +103,12 @@ importers:
         version: 1.3.25
 
 packages:
+
+  '@agnishc/edb-context-viewer@0.21.1':
+    resolution: {integrity: sha512-KrbGSaIetv00Bhdhh6uwaYy13JX6w3FyGqgAj7nAl1UU+yYqYzYyLQbXKlxRJqsnuKr86DPpHHjqDQPq4gAcfA==}
+    peerDependencies:
+      '@earendil-works/pi-coding-agent': '*'
+      '@earendil-works/pi-tui': '*'
 
   '@anthropic-ai/sdk@0.91.1':
     resolution: {integrity: sha512-LAmu761tSN9r66ixvmciswUj/ZC+1Q4iAfpedTfSVLeswRwnY3n2Nb6Tsk+cLPP28aLOPWeMgIuTuCcMC6W/iw==}
@@ -2641,6 +2650,11 @@ packages:
     resolution: {integrity: sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==}
 
 snapshots:
+
+  '@agnishc/edb-context-viewer@0.21.1(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4)':
+    dependencies:
+      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
+      '@earendil-works/pi-tui': 0.84.4
 
   '@anthropic-ai/sdk@0.91.1(zod@4.5.4)':
     dependencies:
