@@ -167,14 +167,15 @@ if [[ "${PI_MCP_CONFIG_MODE,,}" == "exclusive" ]]; then
   materialize_config "$PI_HARNESS_MCP_CONFIG" "$pi_config_dir/mcp.json"
 fi
 
-# Single-source tool policy: deny-list only via PI_HARNESS_EXCLUDE_TOOLS.
-# Remove any stale defaultTools allowlist from the effective settings so Pi
-# falls back to its built-in defaults, then filtered by --exclude-tools.
-# Extensions and paperclip_* MCP tools stay allowed.
+# Tool policy: fixed defaultTools=[read,find] + deny-list via PI_HARNESS_EXCLUDE_TOOLS.
+# Pi defaults are [read,bash,edit,write] without find, so enforce our allow-list
+# then filter by --exclude-tools. Extensions and paperclip_* MCP tools stay allowed.
 if [[ -f "$pi_config_dir/settings.json" ]]; then
-  if ! node -e 'const fs=require("node:fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p,"utf8"));if("defaultTools" in s){delete s.defaultTools;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n");console.error("[pi-harness] removed stale defaultTools allowlist");}' "$pi_config_dir/settings.json"; then
+  if ! node -e 'const fs=require("node:fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p,"utf8"));const want=["read","find"];const cur=s.defaultTools;if(JSON.stringify(cur)!==JSON.stringify(want)){s.defaultTools=want;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n");console.error("[pi-harness] enforced defaultTools=[read,find]");}' "$pi_config_dir/settings.json"; then
     log "Could not normalize $pi_config_dir/settings.json, continuing with Pi defaults"
   fi
+else
+  printf '{\n  "defaultTools": [\n    "read",\n    "find"\n  ]\n}\n' > "$pi_config_dir/settings.json"
 fi
 
 if [[ ! -x "$PI_DOCUMENT_CONVERT_PYTHON" ]]; then

@@ -30,10 +30,10 @@ for (const [key, value] of Object.entries(webConfig)) {
   }
 }
 
-// Single-source tool policy: deny-list only. No defaultTools allowlist in repo.
+// Tool policy: fixed defaultTools=[read,find] + deny-list via PI_HARNESS_EXCLUDE_TOOLS.
 const repoSettings = JSON.parse(readFileSync(rootPath(".pi/settings.json"), "utf8"));
-if ("defaultTools" in repoSettings) {
-  throw new Error(".pi/settings.json must not contain defaultTools (deny-list only via PI_HARNESS_EXCLUDE_TOOLS)");
+if (JSON.stringify(repoSettings.defaultTools) !== JSON.stringify(["read", "find"])) {
+  throw new Error('.pi/settings.json defaultTools must be ["read","find"]');
 }
 
 const mcpConfig = JSON.parse(readFileSync(rootPath(".mcp.json"), "utf8"));
@@ -70,8 +70,8 @@ if (!launcher.includes('filter_pi_tool_allowlists "$@"')) {
 if (!launcher.includes('PI_HARNESS_EXCLUDE_TOOLS:-bash,edit,write,grep,ls')) {
   throw new Error('run-pi-local.sh default PI_HARNESS_EXCLUDE_TOOLS must be bash,edit,write,grep,ls');
 }
-if (!launcher.includes('delete s.defaultTools') && !launcher.includes('del(.defaultTools)')) {
-  throw new Error("run-pi-local.sh must normalize stale defaultTools from effective settings.json");
+if (!launcher.includes('s.defaultTools=want') && !launcher.includes('"defaultTools"')) {
+  throw new Error("run-pi-local.sh must enforce defaultTools=[read,find] in effective settings.json");
 }
 const codeLines = launcher.split("\n").filter((l) => !l.trim().startsWith("#"));
 const codeOnly = codeLines.join("\n");

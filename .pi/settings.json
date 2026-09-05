@@ -1,4 +1,8 @@
 {
+  "defaultTools": [
+    "read",
+    "find"
+  ],
   "packages": [
     "../node_modules/pi-session-trace",
     "../pi-web-access",
