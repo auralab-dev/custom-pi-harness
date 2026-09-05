@@ -81,6 +81,12 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  pi-workspace-boundary:
+    dependencies:
+      '@earendil-works/pi-coding-agent':
+        specifier: '*'
+        version: 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
+
   pi-zvec-content:
     dependencies:
       '@earendil-works/pi-coding-agent':

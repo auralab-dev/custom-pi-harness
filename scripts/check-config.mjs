@@ -52,6 +52,12 @@ if (!launcher.includes('${PI_HARNESS_LOG:-false}')) {
 if (launcher.includes('export PI_CODING_AGENT_DIR=') || launcher.includes('PI_CODING_AGENT_SESSION_DIR')) {
   throw new Error("run-pi-local.sh must preserve Paperclip's Pi config and session topology");
 }
+if (!launcher.includes('--extension "$ROOT/pi-workspace-boundary/index.ts"')) {
+  throw new Error("run-pi-local.sh must load the read/find workspace boundary");
+}
+if (launcher.includes('PI_HARNESS_EXCLUDE_TOOLS:-read,')) {
+  throw new Error("run-pi-local.sh must keep bounded read enabled by default");
+}
 
 const packageJson = JSON.parse(readFileSync(rootPath("package.json"), "utf8"));
 if (packageJson.packageManager !== "pnpm@11.24.0") {

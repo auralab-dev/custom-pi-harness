@@ -21,13 +21,16 @@ The resulting model-facing content tools are:
 
 ```text
 find
+read
 web_search
 download_file
 file_content_search
 paperclip_* (direct MCP tools)
 ```
 
-Pi built-ins `read`, `bash`, `edit`, `write`, `grep`, and `ls` are excluded.
+Pi built-ins `bash`, `edit`, `write`, `grep`, and `ls` are excluded. A
+fail-closed hook restricts built-in `read` and `find` to the current workspace,
+including canonical checks that reject symlink escapes.
 
 ## Install and run
 

@@ -9,9 +9,9 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "check": "pnpm run typecheck && pnpm run check:config",
+    "check": "pnpm run typecheck && pnpm --filter pi-workspace-boundary test && pnpm run check:config",
     "check:config": "node scripts/check-config.mjs",
-    "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck"
+    "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck && pnpm --filter pi-workspace-boundary typecheck"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "0.84.4",

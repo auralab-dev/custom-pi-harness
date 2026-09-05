@@ -111,7 +111,8 @@ export PI_MCP_CONFIG_MODE="${PI_MCP_CONFIG_MODE:-exclusive}"
 for pkg in \
   pi-web-access \
   pi-zvec-content \
-  pi-document-convert
+  pi-document-convert \
+  pi-workspace-boundary
 do
   if [[ ! -f "$ROOT/$pkg/package.json" ]]; then
     error "Missing package:"
@@ -214,6 +215,7 @@ args=(
   --no-extensions
   --extension "$ROOT/pi-web-access/index.ts"
   --extension "$ROOT/pi-zvec-content/index.ts"
+  --extension "$ROOT/pi-workspace-boundary/index.ts"
   --extension "$ROOT/node_modules/pi-mcp-adapter/index.ts"
   --mcp-config "$PI_HARNESS_MCP_CONFIG"
 )
@@ -235,7 +237,7 @@ fi
 # Run
 # ---------------------------------------------------------------------------
 
-exclude_tools="${PI_HARNESS_EXCLUDE_TOOLS:-read,bash,edit,write,grep,ls}"
+exclude_tools="${PI_HARNESS_EXCLUDE_TOOLS:-bash,edit,write,grep,ls}"
 log "Excluded Pi built-in tools: $exclude_tools"
 
 # Keep the exclusion after adapter-supplied --tools arguments. Pi applies the

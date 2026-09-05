@@ -2,6 +2,7 @@ packages:
   - pi-web-access
   - pi-zvec-content
   - pi-document-convert
+  - pi-workspace-boundary
 
 allowBuilds:
   '@google/genai': false
