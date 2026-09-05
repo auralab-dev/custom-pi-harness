@@ -232,6 +232,7 @@ args=(
   --extension "$ROOT/pi-workspace-boundary/index.ts"
   --extension "$ROOT/node_modules/@agnishc/edb-context-viewer/src/index.ts"
   --extension "$ROOT/node_modules/pi-mcp-adapter/index.ts"
+  --extension "$ROOT/node_modules/@arhen/pi-core-skill-tool/src/index.ts"
   --mcp-config "$PI_HARNESS_MCP_CONFIG"
 )
 

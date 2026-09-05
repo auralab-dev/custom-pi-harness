@@ -8,7 +8,8 @@
     "../node_modules/pi-session-trace",
     "../pi-web-access",
     "../pi-zvec-content",
-    "../node_modules/pi-mcp-adapter"
+    "../node_modules/pi-mcp-adapter",
+    "../node_modules/@arhen/pi-core-skill-tool"
   ],
   "defaultProvider": "opencode",
   "defaultModel": "muse-spark-1.3-contributor-free",

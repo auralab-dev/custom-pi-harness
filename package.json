@@ -23,6 +23,7 @@
     "paperclip-mcp-server": "github:auralab-dev/paperclip-mcp#89510c92ae1dde76e305a2327b32c09f8e487ddc",
     "pi-mcp-adapter": "2.32.1",
     "pi-session-trace": "0.1.5",
+    "@arhen/pi-core-skill-tool": "1.0.10",
     "typebox": "^1.1.38"
   }
 }
