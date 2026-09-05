@@ -31,6 +31,8 @@ paperclip_* (direct MCP tools)
 Pi built-ins `bash`, `edit`, `write`, `grep`, and `ls` are excluded. A
 fail-closed hook restricts built-in `read` and `find` to the current workspace,
 including canonical checks that reject symlink escapes.
+The launcher discards caller-supplied `--tools` allowlists before applying this
+policy so Paperclip cannot accidentally hide extension or MCP tools.
 
 ## Install and run
 

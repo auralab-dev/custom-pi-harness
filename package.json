@@ -9,7 +9,8 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "check": "pnpm run typecheck && pnpm --filter pi-workspace-boundary test && pnpm run check:config",
+    "check": "pnpm run typecheck && pnpm --filter pi-workspace-boundary test && pnpm run check:launcher && pnpm run check:config",
+    "check:launcher": "bash scripts/test-pi-arguments.sh",
     "check:config": "node scripts/check-config.mjs",
     "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck && pnpm --filter pi-workspace-boundary typecheck"
   },

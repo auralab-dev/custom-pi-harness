@@ -58,6 +58,9 @@ if (!launcher.includes('--extension "$ROOT/pi-workspace-boundary/index.ts"')) {
 if (launcher.includes('PI_HARNESS_EXCLUDE_TOOLS:-read,')) {
   throw new Error("run-pi-local.sh must keep bounded read enabled by default");
 }
+if (!launcher.includes('filter_pi_tool_allowlists "$@"')) {
+  throw new Error("run-pi-local.sh must remove caller tool allowlists");
+}
 
 const packageJson = JSON.parse(readFileSync(rootPath("package.json"), "utf8"));
 if (packageJson.packageManager !== "pnpm@11.24.0") {

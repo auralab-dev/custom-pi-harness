@@ -41,6 +41,9 @@ error() {
 
 trap 'error "Launcher failed at line $LINENO: $BASH_COMMAND"' ERR
 
+# shellcheck source=scripts/pi-arguments.sh
+source "$ROOT/scripts/pi-arguments.sh"
+
 # ---------------------------------------------------------------------------
 # Pi config and per-agent harness state
 # ---------------------------------------------------------------------------
@@ -240,7 +243,9 @@ fi
 exclude_tools="${PI_HARNESS_EXCLUDE_TOOLS:-bash,edit,write,grep,ls}"
 log "Excluded Pi built-in tools: $exclude_tools"
 
-# Keep the exclusion after adapter-supplied --tools arguments. Pi applies the
-# denylist to the final tool set, so Paperclip's normal adapter invocation
-# cannot re-enable direct file or shell access.
-exec "$PI_BIN" "${args[@]}" "$@" --exclude-tools "$exclude_tools"
+filter_pi_tool_allowlists "$@"
+
+# Paperclip's built-in-only --tools allowlist has been removed. Keep the
+# exclusion last so adapter extraArgs cannot re-enable direct file or shell
+# access, while extension and MCP tools remain active.
+exec "$PI_BIN" "${args[@]}" "${PI_HARNESS_FORWARDED_ARGS[@]}" --exclude-tools "$exclude_tools"
