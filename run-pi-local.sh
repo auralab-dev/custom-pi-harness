@@ -4,9 +4,18 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKING_CWD="$PWD"
 
+wrapper_logging_enabled() {
+  case "${PI_HARNESS_LOG:-false}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [[ -f "$ROOT/.env.local" ]]; then
-  printf '[%s] [INFO] Loading optional local environment: %s\n' \
-    "$(date '+%Y-%m-%d %H:%M:%S')" "$ROOT/.env.local" >&2
+  if wrapper_logging_enabled; then
+    printf '[%s] [INFO] Loading optional local environment: %s\n' \
+      "$(date '+%Y-%m-%d %H:%M:%S')" "$ROOT/.env.local" >&2
+  fi
   # .env.local is intentionally ignored by Git and is only sourced when the
   # operator created it locally. The Paperclip container does not copy it.
   set -a
@@ -22,6 +31,7 @@ timestamp() {
 }
 
 log() {
+  wrapper_logging_enabled || return 0
   printf '[%s] [INFO] %s\n' "$(timestamp)" "$*" >&2
 }
 

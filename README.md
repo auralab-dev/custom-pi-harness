@@ -43,6 +43,8 @@ cp .env.local.example .env.local
 The launcher may be called from another workspace. It preserves that working
 directory and stores mutable Pi state under
 `PI_HARNESS_STATE_ROOT/<PAPERCLIP_AGENT_ID>`.
+Launcher diagnostics are silent by default so model discovery receives plain Pi
+output. Set `PI_HARNESS_LOG=true` when debugging the wrapper.
 
 ## Paperclip runtime
 

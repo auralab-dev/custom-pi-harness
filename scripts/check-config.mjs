@@ -46,6 +46,9 @@ const launcher = readFileSync(rootPath("run-pi-local.sh"), "utf8");
 if (!launcher.includes('cp "$PI_HARNESS_MCP_CONFIG" "$agent_state_dir/mcp.json"')) {
   throw new Error("run-pi-local.sh must materialize the exclusive per-agent MCP config");
 }
+if (!launcher.includes('${PI_HARNESS_LOG:-false}')) {
+  throw new Error("run-pi-local.sh must keep wrapper diagnostics opt-in");
+}
 
 const packageJson = JSON.parse(readFileSync(rootPath("package.json"), "utf8"));
 if (packageJson.packageManager !== "pnpm@11.24.0") {
