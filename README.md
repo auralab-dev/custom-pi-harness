@@ -34,6 +34,13 @@ including canonical checks that reject symlink escapes.
 The launcher discards caller-supplied `--tools` allowlists before applying this
 policy so Paperclip cannot accidentally hide extension or MCP tools.
 
+## Tool policy (single source, deny-list only)
+
+- Single var `PI_HARNESS_EXCLUDE_TOOLS`, default `bash,edit,write,grep,ls`.
+- No `defaultTools`, no `--tools` anywhere. To change 2 tools edit 1 env value.
+- Example: allow only `read,find` built-ins -> keep default. To also block `find`: `PI_HARNESS_EXCLUDE_TOOLS=bash,edit,write,grep,ls,find`.
+- Launcher strips stale `defaultTools` from `$PI_CODING_AGENT_DIR/settings.json` on boot.
+
 ## Install and run
 
 Requires Node.js 22.19+, pnpm 11, and Python 3.11+.
