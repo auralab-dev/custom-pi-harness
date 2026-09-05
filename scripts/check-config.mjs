@@ -43,11 +43,14 @@ if (JSON.stringify(paperclip).includes("PAPERCLIP_TEST_ALLOW_WRITES")) {
 }
 
 const launcher = readFileSync(rootPath("run-pi-local.sh"), "utf8");
-if (!launcher.includes('cp "$PI_HARNESS_MCP_CONFIG" "$agent_state_dir/mcp.json"')) {
-  throw new Error("run-pi-local.sh must materialize the exclusive per-agent MCP config");
+if (!launcher.includes('materialize_config "$PI_HARNESS_MCP_CONFIG" "$pi_config_dir/mcp.json"')) {
+  throw new Error("run-pi-local.sh must materialize the exclusive effective MCP config");
 }
 if (!launcher.includes('${PI_HARNESS_LOG:-false}')) {
   throw new Error("run-pi-local.sh must keep wrapper diagnostics opt-in");
+}
+if (launcher.includes('export PI_CODING_AGENT_DIR=') || launcher.includes('PI_CODING_AGENT_SESSION_DIR')) {
+  throw new Error("run-pi-local.sh must preserve Paperclip's Pi config and session topology");
 }
 
 const packageJson = JSON.parse(readFileSync(rootPath("package.json"), "utf8"));

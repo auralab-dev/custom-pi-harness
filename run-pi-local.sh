@@ -42,7 +42,7 @@ error() {
 trap 'error "Launcher failed at line $LINENO: $BASH_COMMAND"' ERR
 
 # ---------------------------------------------------------------------------
-# Per-agent Pi state
+# Pi config and per-agent harness state
 # ---------------------------------------------------------------------------
 
 agent_id="${PAPERCLIP_AGENT_ID:-local}"
@@ -56,31 +56,27 @@ fi
 agent_state_dir="$state_root/$agent_key"
 mkdir -p "$agent_state_dir"
 
-# Paperclip may provide a temporary PI_CODING_AGENT_DIR containing models.json
-# for a custom provider. Preserve those runtime-only files while moving all
-# other Pi state into this agent's isolated persistent directory.
-inherited_agent_dir="${PI_CODING_AGENT_DIR:-}"
-if [[ -n "$inherited_agent_dir" && "$inherited_agent_dir" != "$agent_state_dir" ]]; then
-  for runtime_file in auth.json models.json; do
-    if [[ "$runtime_file" == "models.json" && -f "$inherited_agent_dir/$runtime_file" ]]; then
-      cp "$inherited_agent_dir/$runtime_file" "$agent_state_dir/$runtime_file"
-    elif [[ -f "$inherited_agent_dir/$runtime_file" && ! -f "$agent_state_dir/$runtime_file" ]]; then
-      cp "$inherited_agent_dir/$runtime_file" "$agent_state_dir/$runtime_file"
-    fi
-  done
+if [[ -n "${PI_CODING_AGENT_DIR:-}" ]]; then
+  pi_config_dir="$PI_CODING_AGENT_DIR"
+  pi_config_source="Paperclip-provided"
+else
+  pi_config_dir="$HOME/.pi/agent"
+  pi_config_source="global"
 fi
+mkdir -p "$pi_config_dir"
 
-export PI_CODING_AGENT_DIR="$agent_state_dir"
-export PI_CODING_AGENT_SESSION_DIR="$agent_state_dir/sessions"
-
-# Provider and extension configuration is immutable profile input. Copy it to
-# the per-agent config directory so concurrent agents never share mutable Pi
-# settings, caches, auth, or package metadata.
-for profile_file in web-search.json zvec-content.json document-convert.json; do
-  if [[ -f "$ROOT/.pi/$profile_file" ]]; then
-    cp "$ROOT/.pi/$profile_file" "$agent_state_dir/$profile_file"
+materialize_config() {
+  local source="$1"
+  local destination="$2"
+  local temporary
+  temporary="$(mktemp "${destination}.tmp.XXXXXX")"
+  if cp "$source" "$temporary"; then
+    mv -f "$temporary" "$destination"
+  else
+    rm -f "$temporary"
+    return 1
   fi
-done
+}
 
 export PI_HARNESS_MCP_ENTRY="$ROOT/node_modules/paperclip-mcp-server/dist/index.js"
 export PI_HARNESS_MCP_CONFIG="$ROOT/.mcp.json"
@@ -152,12 +148,19 @@ if [[ ! -f "$ROOT/.mcp.json" ]]; then
   exit 1
 fi
 
+# Extensions resolve their immutable profiles through Pi's effective config
+# directory. Preserve global auth/models/settings and any Paperclip-managed
+# models.json while atomically refreshing only harness-owned files.
+for profile_file in web-search.json zvec-content.json document-convert.json; do
+  if [[ -f "$ROOT/.pi/$profile_file" ]]; then
+    materialize_config "$ROOT/.pi/$profile_file" "$pi_config_dir/$profile_file"
+  fi
+done
+
 # In exclusive mode pi-mcp-adapter deliberately ignores --mcp-config and reads
-# only the Pi-owned global config. Materialize the immutable harness config at
-# that location so each agent gets the Paperclip MCP server without discovering
-# or merging ambient host/project MCP configuration.
+# only the Pi-owned global config.
 if [[ "${PI_MCP_CONFIG_MODE,,}" == "exclusive" ]]; then
-  cp "$PI_HARNESS_MCP_CONFIG" "$agent_state_dir/mcp.json"
+  materialize_config "$PI_HARNESS_MCP_CONFIG" "$pi_config_dir/mcp.json"
 fi
 
 if [[ ! -x "$PI_DOCUMENT_CONVERT_PYTHON" ]]; then
@@ -189,8 +192,8 @@ fi
 log "Harness root: $ROOT"
 log "Working directory: $WORKING_CWD"
 log "Pi executable: $PI_BIN"
-log "Pi config: $PI_CODING_AGENT_DIR"
-log "Agent state: $agent_state_dir"
+log "Pi config ($pi_config_source): $pi_config_dir"
+log "Per-agent harness state: $agent_state_dir"
 log "Paperclip MCP: $PI_HARNESS_MCP_ENTRY"
 log "MCP config: $PI_HARNESS_MCP_CONFIG"
 
