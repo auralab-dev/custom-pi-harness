@@ -42,6 +42,11 @@ if (JSON.stringify(paperclip).includes("PAPERCLIP_TEST_ALLOW_WRITES")) {
   throw new Error(".mcp.json must not enable PAPERCLIP_TEST_ALLOW_WRITES");
 }
 
+const launcher = readFileSync(rootPath("run-pi-local.sh"), "utf8");
+if (!launcher.includes('cp "$PI_HARNESS_MCP_CONFIG" "$agent_state_dir/mcp.json"')) {
+  throw new Error("run-pi-local.sh must materialize the exclusive per-agent MCP config");
+}
+
 const packageJson = JSON.parse(readFileSync(rootPath("package.json"), "utf8"));
 if (packageJson.packageManager !== "pnpm@11.24.0") {
   throw new Error("package.json must pin the supported pnpm version");

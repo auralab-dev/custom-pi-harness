@@ -142,6 +142,14 @@ if [[ ! -f "$ROOT/.mcp.json" ]]; then
   exit 1
 fi
 
+# In exclusive mode pi-mcp-adapter deliberately ignores --mcp-config and reads
+# only the Pi-owned global config. Materialize the immutable harness config at
+# that location so each agent gets the Paperclip MCP server without discovering
+# or merging ambient host/project MCP configuration.
+if [[ "${PI_MCP_CONFIG_MODE,,}" == "exclusive" ]]; then
+  cp "$PI_HARNESS_MCP_CONFIG" "$agent_state_dir/mcp.json"
+fi
+
 if [[ ! -x "$PI_DOCUMENT_CONVERT_PYTHON" ]]; then
   error "Document converter Python venv not found:"
   error "  $PI_DOCUMENT_CONVERT_PYTHON"
