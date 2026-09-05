@@ -117,6 +117,25 @@ async function extractWithDefuddle(text: string, url: string): Promise<{ title: 
 	return typeof result.content === "string" ? { title: result.title, content: result.content } : null;
 }
 
+
+function isFullHtmlDocument(text: string): boolean {
+	return /<!doctype\s+html\b/i.test(text) || /<html(?:\s|>)/i.test(text) || /<body(?:\s|>)/i.test(text);
+}
+
+function extractHtmlFragmentMarkdown(text: string): string | null {
+	// Some APIs (notably ELI/Sejm text.html) deliberately return an XML/HTML
+	// fragment rather than a complete document. Readability requires a document
+	// element and can throw on these perfectly valid fragment responses.
+	const fragment = text.replace(/^\s*<\?xml[^>]*\?>\s*/i, "").trim();
+	if (!fragment) return null;
+	try {
+		const markdown = turndown.turndown(fragment).trim();
+		return markdown || null;
+	} catch {
+		return null;
+	}
+}
+
 export { loadSsrfConfig } from "./ssrf-protection.ts";
 
 export function loadSsrfAllowRanges(): string[] {
@@ -1284,15 +1303,47 @@ async function extractViaHttp(
 			return { url, title, content: text, error: null };
 		}
 
-		const { document } = parseHTML(text);
-		const documentTitle = document.title?.trim() ?? "";
-		const declaredLinks = discoverDeclaredWebLinks(
-			document as unknown as Document,
-			response.headers.get("link"),
-			response.url || url,
-		);
-		const reader = new Readability(document as unknown as Document);
-		const article = reader.parse();
+		// HTML endpoints are not required to return a complete HTML document.
+		// ELI/Sejm, for example, returns XML + a root <div> for text.html.
+		// Handle fragments directly instead of feeding them to Readability.
+		if (!isFullHtmlDocument(text)) {
+			const fragmentMarkdown = extractHtmlFragmentMarkdown(text);
+			if (fragmentMarkdown) {
+				activityMonitor.logComplete(activityId, response.status);
+				return {
+					url,
+					title: extractTextTitle(fragmentMarkdown, response.url || url),
+					content: fragmentMarkdown,
+					error: null,
+					declaredLinks: [],
+				};
+			}
+		}
+
+		let document: ReturnType<typeof parseHTML>["document"] | null = null;
+		let documentTitle = "";
+		let declaredLinks: DeclaredWebLink[] = [];
+		try {
+			document = parseHTML(text).document;
+			documentTitle = document.title?.trim() ?? "";
+			declaredLinks = discoverDeclaredWebLinks(
+				document as unknown as Document,
+				response.headers.get("link"),
+				response.url || url,
+			);
+		} catch {
+			// Keep the raw HTML available for the local fallbacks below.
+		}
+
+		let article: ReturnType<Readability["parse"]> = null;
+		if (document?.documentElement) {
+			try {
+				article = new Readability(document as unknown as Document).parse();
+			} catch {
+				// Readability is an optimization, not a validity gate. Defuddle/RSC
+				// and the fragment converter can still recover usable content.
+			}
+		}
 
 		if (!article) {
 			const rscResult = extractRSCContent(text);

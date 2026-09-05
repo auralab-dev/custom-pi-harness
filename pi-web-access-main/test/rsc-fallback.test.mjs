@@ -141,3 +141,17 @@ test("background fetch notification distinguishes full, partial, and failed cont
 	assert.match(indexSrc, /"No page content was fetched\. Stored fetch diagnostics are available\."/);
 	assert.match(indexSrc, /Content fetched for \$\{ok\}\/\$\{fetched\.length\} URLs \[\$\{fetchId\}\]\. \$\{availability\}/);
 });
+
+test("HTML fragment responses bypass Readability and convert locally", async (t) => {
+	t.after(() => { globalThis.fetch = originalFetch; });
+	const paragraph = "kwalifikacje zawodowe wymagane oraz dodatkowe; ".repeat(20);
+	globalThis.fetch = async () => new Response(
+		`<?xml version="1.0" encoding="UTF-8"?><div class="unit unit_pint"><h3>3)</h3><div class="unit-inner"><div>${paragraph}</div></div></div>`,
+		{ status: 200, headers: { "content-type": "text/html;charset=UTF-8" } },
+	);
+
+	const result = await extractContent("https://api.sejm.gov.pl/eli/acts/DU/2020/2/text.html", undefined, { lookup });
+	assert.equal(result.error, null);
+	assert.match(result.content, /kwalifikacje zawodowe wymagane/);
+	assert.doesNotMatch(result.content, /<\?xml/);
+});

@@ -2788,6 +2788,14 @@ export default function (pi: ExtensionAPI) {
 				return new Text(theme.fg("success", details.path), 0, 0);
 			}
 
+			// Pi-created error results for a thrown tool exception do not carry the
+			// normal fetch counters. Render their text directly instead of showing
+			// "undefined/undefined URLs".
+			if (details?.urlCount === undefined && details?.successful === undefined && !details?.error) {
+				const textContent = result.content.find((c) => c.type === "text")?.text || "Download failed";
+				return new Text(theme.fg("error", textContent), 0, 0);
+			}
+
 			if (details?.error) {
 				const fd = details as typeof details & { urls?: string[] };
 				const extras: string[] = [];

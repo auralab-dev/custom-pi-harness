@@ -1,5 +1,5 @@
 {
-  "embedding": "local/potion-retrieval-32m",
-  "limit": 4,
+  "embedding": "local/potion-multilingual-128m",
+  "limit": 8,
   "maxResultChars": 4000
 }

@@ -12,5 +12,5 @@ allowBuilds:
   sharp: true
 
   # Optional dependency of zvec-grep; not needed for
-  # local/potion-retrieval-32m embeddings.
+  # local Model2Vec embeddings (including potion-multilingual-128m).
   node-llama-cpp: false
