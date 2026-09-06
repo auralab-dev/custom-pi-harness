@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Single-source tool policy: deny-list only via PI_HARNESS_EXCLUDE_TOOLS.
 # Pi's --tools flag is a global allowlist covering built-in, extension, and MCP
-# tools. Paperclip supplies a built-in-only list, so the harness must remove it
-# before applying its own final denylist. Never add --tools here.
+# tools. Paperclip supplies a built-in-only list, so the harness removes it and
+# relies on defaultTools plus pi-playpen for the seven built-ins. This keeps
+# extension and MCP tools visible while Playpen enforces filesystem scope.
 filter_pi_tool_allowlists() {
   PI_HARNESS_FORWARDED_ARGS=()
 

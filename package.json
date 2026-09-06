@@ -9,10 +9,11 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "check": "pnpm run typecheck && pnpm --filter pi-workspace-boundary test && pnpm run check:launcher && pnpm run check:config",
+    "check": "pnpm run typecheck && pnpm run check:scope && pnpm run check:launcher && pnpm run check:config",
     "check:launcher": "bash scripts/test-pi-arguments.sh",
     "check:config": "node scripts/check-config.mjs",
-    "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck && pnpm --filter pi-workspace-boundary typecheck"
+    "typecheck": "pnpm --filter pi-web-access typecheck && pnpm --filter pi-zvec-content typecheck",
+    "check:scope": "node --test scripts/prepare-playpen-config.test.mjs"
   },
   "dependencies": {
     "@agnishc/edb-context-viewer": "0.21.1",
@@ -24,6 +25,8 @@
     "pi-mcp-adapter": "2.32.1",
     "pi-session-trace": "0.1.5",
     "@arhen/pi-core-skill-tool": "1.0.10",
-    "typebox": "^1.1.38"
+    "typebox": "^1.1.38",
+    "pi-playpen": "0.1.3",
+    "jiti": "2.7.0"
   }
 }

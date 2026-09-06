@@ -103,7 +103,12 @@ log "Using pnpm workspace: $PNPM_WORKSPACE"
 log "Installing Node workspace dependencies"
 (
   cd "$ROOT"
-  pnpm install --frozen-lockfile
+  if grep -qE '^[[:space:]]+pi-playpen:' pnpm-lock.yaml; then
+    pnpm install --frozen-lockfile
+  else
+    warn "pnpm-lock.yaml predates pi-playpen; refreshing it once"
+    pnpm install --no-frozen-lockfile
+  fi
 )
 
 VENV_ROOT="$ROOT/.pi/document-convert"

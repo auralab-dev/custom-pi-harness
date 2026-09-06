@@ -26,12 +26,18 @@ importers:
       '@zvec/zvec-grep':
         specifier: ^0.2.1
         version: 0.2.1(hono@4.13.5)(typescript@7.0.2)
+      jiti:
+        specifier: 2.7.0
+        version: 2.7.0
       paperclip-mcp-server:
         specifier: github:auralab-dev/paperclip-mcp#89510c92ae1dde76e305a2327b32c09f8e487ddc
         version: https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc
       pi-mcp-adapter:
         specifier: 2.32.1
         version: 2.32.1(@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4)(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(typebox@1.3.25)(zod@4.5.4)
+      pi-playpen:
+        specifier: 0.1.3
+        version: 0.1.3(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(typebox@1.3.25)
       pi-session-trace:
         specifier: 0.1.5
         version: 0.1.5(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4)
@@ -87,12 +93,6 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  pi-workspace-boundary:
-    dependencies:
-      '@earendil-works/pi-coding-agent':
-        specifier: '*'
-        version: 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
-
   pi-zvec-content:
     dependencies:
       '@earendil-works/pi-coding-agent':
@@ -112,6 +112,11 @@ packages:
     peerDependencies:
       '@earendil-works/pi-coding-agent': '*'
       '@earendil-works/pi-tui': '*'
+
+  '@anthropic-ai/sandbox-runtime@0.0.64':
+    resolution: {integrity: sha512-7w/+8g9p9RjUr7G9k1v/B5Edbw2GzjQ4Kigqdq0/LSudqOYi90+8+olOmwc1uInBbe2YLN+NDNrIf/jA4tNbCA==}
+    engines: {node: '>=20.11.0'}
+    hasBin: true
 
   '@anthropic-ai/sdk@0.91.1':
     resolution: {integrity: sha512-LAmu761tSN9r66ixvmciswUj/ZC+1Q4iAfpedTfSVLeswRwnY3n2Nb6Tsk+cLPP28aLOPWeMgIuTuCcMC6W/iw==}
@@ -739,6 +744,9 @@ packages:
   '@pkgr/core@0.1.2':
     resolution: {integrity: sha512-fdDH1LSGfZdTH2sxdpVMw31BanV28K/Gry0cVFxaNP77neJSkd82mM8ErPNYs9e+0O7SdHBLTDzDgwUuy18RnQ==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@pondwader/socks5-server@1.0.10':
+    resolution: {integrity: sha512-bQY06wzzR8D2+vVCUoBsr5QS2U6UgPUQRmErNwtsuI6vLcyRKkafjkr3KxbtGFf9aBBIV2mcvlsKD1UYaIV+sg==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -2018,6 +2026,10 @@ packages:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  node-forge@1.4.0:
+    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+    engines: {node: '>= 6.13.0'}
+
   node-llama-cpp@3.18.1:
     resolution: {integrity: sha512-w0zfuy/IKS2fhrbed5SylZDXJHTVz4HnkwZ4UrFPgSNwJab3QIPwIl4lyCKHHy9flLrtxsAuV5kXfH3HZ6bb8w==}
     engines: {node: '>=20.0.0'}
@@ -2150,6 +2162,12 @@ packages:
         optional: true
       typebox:
         optional: true
+
+  pi-playpen@0.1.3:
+    resolution: {integrity: sha512-W/ZcKXEkOAioGKMB+Vvod4LswX3TXMC24/ZTFCiQRENJLFKtYOH14LhMAKg4367bALmo+iFU9sDWRmlczCByuw==}
+    peerDependencies:
+      '@earendil-works/pi-coding-agent': '*'
+      typebox: '*'
 
   pi-session-trace@0.1.5:
     resolution: {integrity: sha512-ao/EjpcvQ3DjboPzg5yBze8yHx4ql39CRiJYjuXExmByLS4+ndRpfeVYcIRyix+vSHZbjfJWKNzOgm2BoiXlAA==}
@@ -2652,6 +2670,9 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
   zod@4.2.0:
     resolution: {integrity: sha512-Bd5fw9wlIhtqCCxotZgdTOMwGm1a0u75wARVEY9HMs1X17trvA/lMi4+MGK5EUfYkXVTbX8UDiDKW4OgzHVUZw==}
 
@@ -2664,6 +2685,13 @@ snapshots:
     dependencies:
       '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
       '@earendil-works/pi-tui': 0.84.4
+
+  '@anthropic-ai/sandbox-runtime@0.0.64':
+    dependencies:
+      '@pondwader/socks5-server': 1.0.10
+      commander: 12.1.0
+      node-forge: 1.4.0
+      zod: 3.25.76
 
   '@anthropic-ai/sdk@0.91.1(zod@4.5.4)':
     dependencies:
@@ -3311,6 +3339,8 @@ snapshots:
     optional: true
 
   '@pkgr/core@0.1.2': {}
+
+  '@pondwader/socks5-server@1.0.10': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -4337,8 +4367,7 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  ignore@7.0.8:
-    optional: true
+  ignore@7.0.8: {}
 
   inherits@2.0.4: {}
 
@@ -4655,6 +4684,8 @@ snapshots:
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
 
+  node-forge@1.4.0: {}
+
   node-llama-cpp@3.18.1(typescript@7.0.2):
     dependencies:
       '@huggingface/jinja': 0.5.9
@@ -4841,6 +4872,15 @@ snapshots:
       - '@modelcontextprotocol/sdk'
       - react
       - react-dom
+
+  pi-playpen@0.1.3(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(typebox@1.3.25):
+    dependencies:
+      '@anthropic-ai/sandbox-runtime': 0.0.64
+      '@earendil-works/pi-coding-agent': 0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4)
+      ignore: 7.0.8
+      jsonc-parser: 3.3.1
+      minimatch: 10.2.5
+      typebox: 1.3.25
 
   pi-session-trace@0.1.5(@earendil-works/pi-coding-agent@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4):
     dependencies:
@@ -5488,6 +5528,8 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.5.4):
     dependencies:
       zod: 4.5.4
+
+  zod@3.25.76: {}
 
   zod@4.2.0: {}
 

@@ -1,7 +1,12 @@
 {
   "defaultTools": [
     "read",
-    "find"
+    "bash",
+    "edit",
+    "write",
+    "grep",
+    "find",
+    "ls"
   ],
   "packages": [
     "../node_modules/@agnishc/edb-context-viewer",

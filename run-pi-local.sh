@@ -59,6 +59,12 @@ fi
 agent_state_dir="$state_root/$agent_key"
 mkdir -p "$agent_state_dir"
 
+run_id="${PAPERCLIP_RUN_ID:-local-$$}"
+run_key="$(printf '%s' "$run_id" | sed 's/[^A-Za-z0-9_-]/_/g')"
+[[ -n "$run_key" ]] || run_key="local-$$"
+run_state_dir="$agent_state_dir/runs/$run_key"
+mkdir -p "$run_state_dir"
+
 if [[ -n "${PI_CODING_AGENT_DIR:-}" ]]; then
   pi_config_dir="$PI_CODING_AGENT_DIR"
   pi_config_source="Paperclip-provided"
@@ -83,6 +89,9 @@ materialize_config() {
 
 export PI_HARNESS_MCP_ENTRY="$ROOT/node_modules/paperclip-mcp-server/dist/index.js"
 export PI_HARNESS_MCP_CONFIG="$ROOT/.mcp.json"
+export PI_HARNESS_PLAYPEN_ENTRY="$ROOT/node_modules/pi-playpen/src/index.ts"
+export PI_HARNESS_PLAYPEN_HOME="$run_state_dir/playpen-home"
+export PI_HARNESS_PLAYPEN_CONFIG="$PI_HARNESS_PLAYPEN_HOME/.pi/agent/extensions/pi-playpen/config.jsonc"
 
 # ---------------------------------------------------------------------------
 # zvec
@@ -114,8 +123,7 @@ export PI_MCP_CONFIG_MODE="${PI_MCP_CONFIG_MODE:-exclusive}"
 for pkg in \
   pi-web-access \
   pi-zvec-content \
-  pi-document-convert \
-  pi-workspace-boundary
+  pi-document-convert
 do
   if [[ ! -f "$ROOT/$pkg/package.json" ]]; then
     error "Missing package:"
@@ -123,6 +131,24 @@ do
     exit 1
   fi
 done
+
+if [[ ! -f "$ROOT/node_modules/pi-playpen/package.json" || ! -f "$PI_HARNESS_PLAYPEN_ENTRY" ]]; then
+  error "pi-playpen dependency not found:"
+  error "  $ROOT/node_modules/pi-playpen"
+  error ""
+  error "Run ./install.sh first."
+  exit 1
+fi
+
+if [[ "$(uname -s)" == "Linux" ]]; then
+  for runtime_tool in bwrap socat rg; do
+    if ! command -v "$runtime_tool" >/dev/null 2>&1; then
+      error "pi-playpen requires '$runtime_tool' on Linux, but it is not in PATH."
+      error "Install bwrap, socat, and ripgrep in the Paperclip/Pi Docker image."
+      exit 1
+    fi
+  done
+fi
 
 if [[ ! -f "$ROOT/node_modules/paperclip-mcp-server/package.json" ]]; then
   error "Paperclip MCP dependency not found:"
@@ -167,15 +193,14 @@ if [[ "${PI_MCP_CONFIG_MODE,,}" == "exclusive" ]]; then
   materialize_config "$PI_HARNESS_MCP_CONFIG" "$pi_config_dir/mcp.json"
 fi
 
-# Tool policy: fixed defaultTools=[read,find] + deny-list via PI_HARNESS_EXCLUDE_TOOLS.
-# Pi defaults are [read,bash,edit,write] without find, so enforce our allow-list
-# then filter by --exclude-tools. Extensions and paperclip_* MCP tools stay allowed.
+# Keep all seven Pi built-ins enabled. pi-playpen, not a tool deny-list,
+# constrains where filesystem and shell operations can reach.
 if [[ -f "$pi_config_dir/settings.json" ]]; then
-  if ! node -e 'const fs=require("node:fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p,"utf8"));const want=["read","find"];const cur=s.defaultTools;if(JSON.stringify(cur)!==JSON.stringify(want)){s.defaultTools=want;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n");console.error("[pi-harness] enforced defaultTools=[read,find]");}' "$pi_config_dir/settings.json"; then
+  if ! node -e 'const fs=require("node:fs");const p=process.argv[1];const s=JSON.parse(fs.readFileSync(p,"utf8"));const want=["read","bash","edit","write","grep","find","ls"];const cur=s.defaultTools;if(JSON.stringify(cur)!==JSON.stringify(want)){s.defaultTools=want;fs.writeFileSync(p,JSON.stringify(s,null,2)+"\n");console.error("[pi-harness] enforced all seven Pi built-ins");}' "$pi_config_dir/settings.json"; then
     log "Could not normalize $pi_config_dir/settings.json, continuing with Pi defaults"
   fi
 else
-  printf '{\n  "defaultTools": [\n    "read",\n    "find"\n  ]\n}\n' > "$pi_config_dir/settings.json"
+  printf '{\n  "defaultTools": [\n    "read",\n    "bash",\n    "edit",\n    "write",\n    "grep",\n    "find",\n    "ls"\n  ]\n}\n' > "$pi_config_dir/settings.json"
 fi
 
 if [[ ! -x "$PI_DOCUMENT_CONVERT_PYTHON" ]]; then
@@ -201,6 +226,21 @@ if [[ ! -x "$PI_BIN" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Paperclip run filesystem scope
+# ---------------------------------------------------------------------------
+
+# Paperclip passes --tools with built-in names only. Remove that global Pi
+# allowlist first so extension/MCP tools remain visible; preserve the remaining
+# arguments because the Paperclip instruction path is embedded in
+# --append-system-prompt.
+filter_pi_tool_allowlists "$@"
+
+node "$ROOT/scripts/prepare-playpen-config.mjs" \
+  --workspace "$WORKING_CWD" \
+  --output "$PI_HARNESS_PLAYPEN_CONFIG" \
+  -- "${PI_HARNESS_FORWARDED_ARGS[@]}"
+
+# ---------------------------------------------------------------------------
 # Diagnostics
 # ---------------------------------------------------------------------------
 
@@ -209,6 +249,8 @@ log "Working directory: $WORKING_CWD"
 log "Pi executable: $PI_BIN"
 log "Pi config ($pi_config_source): $pi_config_dir"
 log "Per-agent harness state: $agent_state_dir"
+log "Per-run harness state: $run_state_dir"
+log "Playpen config: $PI_HARNESS_PLAYPEN_CONFIG"
 log "Paperclip MCP: $PI_HARNESS_MCP_ENTRY"
 log "MCP config: $PI_HARNESS_MCP_CONFIG"
 
@@ -227,9 +269,9 @@ log "  mode: $ZVEC_GREP_MODE"
 
 args=(
   --no-extensions
+  --extension "$ROOT/scripts/pi-playpen-scoped.ts"
   --extension "$ROOT/pi-web-access/index.ts"
   --extension "$ROOT/pi-zvec-content/index.ts"
-  --extension "$ROOT/pi-workspace-boundary/index.ts"
   --extension "$ROOT/node_modules/@agnishc/edb-context-viewer/src/index.ts"
   --extension "$ROOT/node_modules/pi-mcp-adapter/index.ts"
   --extension "$ROOT/node_modules/@arhen/pi-core-skill-tool/src/index.ts"
@@ -253,12 +295,6 @@ fi
 # Run
 # ---------------------------------------------------------------------------
 
-exclude_tools="${PI_HARNESS_EXCLUDE_TOOLS:-bash,edit,write,grep,ls}"
-log "Excluded Pi built-in tools: $exclude_tools"
-
-filter_pi_tool_allowlists "$@"
-
-# Paperclip's built-in-only --tools allowlist has been removed. Keep the
-# exclusion last so adapter extraArgs cannot re-enable direct file or shell
-# access, while extension and MCP tools remain active.
-exec "$PI_BIN" "${args[@]}" "${PI_HARNESS_FORWARDED_ARGS[@]}" --exclude-tools "$exclude_tools"
+# Paperclip's built-in-only --tools allowlist has been removed. All seven
+# built-ins remain enabled; pi-playpen enforces workspace/instruction scope.
+exec "$PI_BIN" "${args[@]}" "${PI_HARNESS_FORWARDED_ARGS[@]}"
