@@ -10,7 +10,7 @@ allowBuilds:
   '@zvec/zvec': true
   onnxruntime-node: true
   sharp: true
-  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc: true
+  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/f2d1158b1f27ce5858be3520cfed36c5500cc2bc: true
 
   # Optional dependency of zvec-grep; not needed for
   # local Model2Vec embeddings (including potion-multilingual-128m).

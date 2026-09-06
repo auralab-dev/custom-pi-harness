@@ -30,8 +30,8 @@ importers:
         specifier: 2.7.0
         version: 2.7.0
       paperclip-mcp-server:
-        specifier: github:auralab-dev/paperclip-mcp#89510c92ae1dde76e305a2327b32c09f8e487ddc
-        version: https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc
+        specifier: github:auralab-dev/paperclip-mcp#f2d1158b1f27ce5858be3520cfed36c5500cc2bc
+        version: https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/f2d1158b1f27ce5858be3520cfed36c5500cc2bc
       pi-mcp-adapter:
         specifier: 2.32.1
         version: 2.32.1(@earendil-works/pi-ai@0.84.4(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(ws@8.21.3)(zod@4.5.4))(@earendil-works/pi-tui@0.84.4)(@modelcontextprotocol/sdk@1.30.0(zod@4.5.4))(typebox@1.3.25)(zod@4.5.4)
@@ -2118,9 +2118,9 @@ packages:
     resolution: {integrity: sha512-312Id396EbJdvRONlngUx0NydfrIQ5lsYu0znKVUzVvArzEIt08V1qhtyESbGVd1FGX7UKtiFp5uwKZdM8wIuQ==}
     engines: {node: '>=8'}
 
-  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc:
-    resolution: {gitHosted: true, integrity: sha512-BZ4rQSZT66eY7a3hDjCOVqrTC47TIbAAYF37Bgp5CiLzARyhmVkUtl0bs1Ha6x87UDRhiQFGD5WKko9lwENcmg==, tarball: https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc}
-    version: 0.6.0
+  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/f2d1158b1f27ce5858be3520cfed36c5500cc2bc:
+    resolution: {gitHosted: true, integrity: sha512-S5/0faLwrwSPAIMXDcsLkKykKqHIsSDZKhE2ZZEd+r4b5eShG48xNGpysoA9sm8LmOgx0qFUD8SaBeUlbD9hLg==, tarball: https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/f2d1158b1f27ce5858be3520cfed36c5500cc2bc}
+    version: 0.7.0
     engines: {node: '>=22.19.0'}
     hasBin: true
 
@@ -4831,7 +4831,7 @@ snapshots:
       '@types/retry': 0.12.0
       retry: 0.13.1
 
-  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/89510c92ae1dde76e305a2327b32c09f8e487ddc:
+  paperclip-mcp-server@https://codeload.github.com/auralab-dev/paperclip-mcp/tar.gz/f2d1158b1f27ce5858be3520cfed36c5500cc2bc:
     dependencies:
       '@modelcontextprotocol/server': 2.0.0
       zod: 4.2.0
